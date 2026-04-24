@@ -755,6 +755,119 @@ section {
     min-height: 120px;
 }
 
+/* Auth */
+.auth-icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid var(--primary-color);
+    background: transparent;
+    color: var(--primary-color);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+}
+
+.auth-icon-btn:hover {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.auth-icon {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.auth-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.auth-modal-overlay.active {
+    display: flex;
+}
+
+.auth-modal {
+    width: 100%;
+    max-width: 460px;
+    background: var(--bg-white);
+    border-radius: 16px;
+    padding: 28px 22px 22px;
+    box-shadow: var(--shadow-hover);
+    position: relative;
+}
+
+.auth-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: none;
+    background: transparent;
+    font-size: 1.6rem;
+    cursor: pointer;
+    color: var(--text-light);
+}
+
+.auth-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+}
+
+.auth-subtitle {
+    color: var(--text-light);
+    margin-bottom: 15px;
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.auth-tab {
+    border: 1px solid var(--border-color);
+    background: #fff;
+    color: var(--text-dark);
+    border-radius: 999px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.auth-tab.active {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.auth-form {
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+}
+
+.auth-submit-btn {
+    width: 100%;
+    margin-top: 6px;
+}
+
+.auth-logout-btn {
+    width: 100%;
+    margin-top: 12px;
+    display: none;
+}
+
 /* Footer */
 .footer {
     background: var(--bg-dark);

@@ -55,9 +55,232 @@ window.addEventListener('scroll', () => {
 // Form Submission Handler
 const appointmentForm = document.getElementById('appointmentForm');
 const API_BASE_URL = '/api';
+const AUTH_TOKEN_KEY = 'token';
+const AUTH_USER_KEY = 'authUser';
 
 function getAuthToken() {
-    return localStorage.getItem('token');
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+function getStoredUser() {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    if (!raw) {
+        return null;
+    }
+    try {
+        return JSON.parse(raw);
+    } catch (_error) {
+        return null;
+    }
+}
+
+function setAuthSession(token, user) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+}
+
+function clearAuthSession() {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
+}
+
+function getAuthErrorMessage(result, fallbackText) {
+    const details = result?.error ? ` ${result.error}` : '';
+    return `${result?.message || fallbackText}${details}`;
+}
+
+function createAuthModalMarkup() {
+    return `
+        <div class="auth-modal-overlay" id="authModalOverlay">
+            <div class="auth-modal">
+                <button type="button" class="auth-close" id="authCloseBtn" aria-label="Закрыть окно">×</button>
+                <h3 class="auth-title">Вход и регистрация</h3>
+                <p class="auth-subtitle" id="authStatusText">Войдите в аккаунт, чтобы записываться онлайн.</p>
+
+                <div class="auth-tabs">
+                    <button type="button" class="auth-tab active" data-auth-tab="login">Вход</button>
+                    <button type="button" class="auth-tab" data-auth-tab="register">Регистрация</button>
+                </div>
+
+                <form id="loginForm" class="auth-form active">
+                    <div class="form-group">
+                        <input type="email" id="loginEmail" placeholder="Email (логин)" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="loginPassword" placeholder="Пароль" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary auth-submit-btn">Войти</button>
+                </form>
+
+                <form id="registerForm" class="auth-form">
+                    <div class="form-group">
+                        <input type="text" id="registerName" placeholder="Ваше имя" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" id="registerEmail" placeholder="Email (логин)" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="tel" id="registerPhone" placeholder="Телефон" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="registerPassword" placeholder="Пароль (минимум 6 символов)" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary auth-submit-btn">Зарегистрироваться</button>
+                </form>
+
+                <button type="button" id="logoutBtn" class="btn btn-secondary auth-logout-btn">Выйти из аккаунта</button>
+            </div>
+        </div>
+    `;
+}
+
+function setupAuthTabs(container) {
+    const tabs = container.querySelectorAll('.auth-tab');
+    const loginForm = container.querySelector('#loginForm');
+    const registerForm = container.querySelector('#registerForm');
+
+    tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+            tabs.forEach((btn) => btn.classList.remove('active'));
+            tab.classList.add('active');
+
+            if (tab.dataset.authTab === 'login') {
+                loginForm.classList.add('active');
+                registerForm.classList.remove('active');
+            } else {
+                registerForm.classList.add('active');
+                loginForm.classList.remove('active');
+            }
+        });
+    });
+}
+
+function initAuthUI() {
+    if (window.location.pathname === '/admin') {
+        return;
+    }
+
+    const navActions = document.querySelector('.nav-actions');
+    if (!navActions) {
+        return;
+    }
+
+    const authButton = document.createElement('button');
+    authButton.type = 'button';
+    authButton.id = 'authButton';
+    authButton.className = 'auth-icon-btn';
+    authButton.setAttribute('aria-label', 'Вход и регистрация');
+    authButton.innerHTML = '<span class="auth-icon">👤</span>';
+    navActions.prepend(authButton);
+
+    document.body.insertAdjacentHTML('beforeend', createAuthModalMarkup());
+    const modalOverlay = document.getElementById('authModalOverlay');
+    const closeButton = document.getElementById('authCloseBtn');
+    const statusText = document.getElementById('authStatusText');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+
+    const updateAuthState = () => {
+        const user = getStoredUser();
+        const isLoggedIn = Boolean(getAuthToken() && user);
+
+        if (isLoggedIn) {
+            const initial = (user.name || user.email || 'U').charAt(0).toUpperCase();
+            statusText.textContent = `Вы вошли как ${user.name || user.email}.`;
+            authButton.innerHTML = `<span class="auth-icon">${initial}</span>`;
+            logoutBtn.style.display = 'block';
+        } else {
+            statusText.textContent = 'Войдите в аккаунт, чтобы записываться онлайн.';
+            authButton.innerHTML = '<span class="auth-icon">👤</span>';
+            logoutBtn.style.display = 'none';
+        }
+    };
+
+    const closeModal = () => {
+        modalOverlay.classList.remove('active');
+    };
+
+    const openModal = () => {
+        modalOverlay.classList.add('active');
+    };
+
+    authButton.addEventListener('click', openModal);
+    closeButton.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (event) => {
+        if (event.target === modalOverlay) {
+            closeModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modalOverlay.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    setupAuthTabs(modalOverlay);
+
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(getAuthErrorMessage(result, 'Ошибка входа.'));
+            }
+
+            setAuthSession(result.token, result.user);
+            updateAuthState();
+            alert('Вход выполнен успешно.');
+            closeModal();
+            loginForm.reset();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
+    registerForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const name = document.getElementById('registerName').value.trim();
+        const email = document.getElementById('registerEmail').value.trim();
+        const phone = document.getElementById('registerPhone').value.trim();
+        const password = document.getElementById('registerPassword').value;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone, password })
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(getAuthErrorMessage(result, 'Ошибка регистрации.'));
+            }
+
+            setAuthSession(result.token, result.user);
+            updateAuthState();
+            alert('Регистрация прошла успешно. Вы вошли в аккаунт.');
+            closeModal();
+            registerForm.reset();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        clearAuthSession();
+        updateAuthState();
+        alert('Вы вышли из аккаунта.');
+    });
+
+    updateAuthState();
 }
 
 if (appointmentForm) {
@@ -285,5 +508,6 @@ async function loadReviews() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    initAuthUI();
     loadReviews();
 });
