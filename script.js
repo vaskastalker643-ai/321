@@ -84,6 +84,15 @@ function clearAuthSession() {
     localStorage.removeItem(AUTH_USER_KEY);
 }
 
+function ensureAuthenticatedOrRedirect() {
+    const token = getAuthToken();
+    if (!token) {
+        window.location.href = '/';
+        return false;
+    }
+    return true;
+}
+
 function getAuthErrorMessage(result, fallbackText) {
     const details = result?.error ? ` ${result.error}` : '';
     return `${result?.message || fallbackText}${details}`;
@@ -165,6 +174,10 @@ function initAuthUI() {
         return;
     }
 
+    const quickLinks = document.createElement('div');
+    quickLinks.className = 'auth-quick-links';
+    navActions.prepend(quickLinks);
+
     const authButton = document.createElement('button');
     authButton.type = 'button';
     authButton.id = 'authButton';
@@ -190,10 +203,14 @@ function initAuthUI() {
             statusText.textContent = `Вы вошли как ${user.name || user.email}.`;
             authButton.innerHTML = `<span class="auth-icon">${initial}</span>`;
             logoutBtn.style.display = 'block';
+            const cabinetLink = '<a class="auth-link-btn" href="/cabinet">Кабинет</a>';
+            const adminLink = user.role === 'admin' ? '<a class="auth-link-btn" href="/admin">Админ</a>' : '';
+            quickLinks.innerHTML = `${cabinetLink}${adminLink}`;
         } else {
             statusText.textContent = 'Войдите в аккаунт, чтобы записываться онлайн.';
             authButton.innerHTML = '<span class="auth-icon">👤</span>';
             logoutBtn.style.display = 'none';
+            quickLinks.innerHTML = '';
         }
     };
 
@@ -446,9 +463,168 @@ function formatDate(dateValue) {
     });
 }
 
+function formatDateTime(dateValue, timeValue) {
+    if (!dateValue) {
+        return '';
+    }
+    const date = new Date(dateValue);
+    const formattedDate = date.toLocaleDateString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    return `${formattedDate}${timeValue ? ` ${timeValue.slice(0, 5)}` : ''}`;
+}
+
 function ratingToStars(rating) {
     const safeRating = Math.max(1, Math.min(5, Number(rating) || 0));
     return `${'★'.repeat(safeRating)}${'☆'.repeat(5 - safeRating)}`;
+}
+
+function renderMyAppointments(appointments) {
+    const list = document.getElementById('myAppointmentsList');
+    if (!list) {
+        return;
+    }
+
+    if (!appointments.length) {
+        list.innerHTML = '<article class="review-card"><p class="review-text">У вас пока нет записей.</p></article>';
+        return;
+    }
+
+    list.innerHTML = appointments.map((item) => `
+        <article class="review-card">
+            <div class="review-header">
+                <div class="review-avatar">📅</div>
+                <div>
+                    <h3 class="review-name">${item.service}</h3>
+                    <p class="review-service">${formatDateTime(item.appointment_date, item.appointment_time)}</p>
+                </div>
+            </div>
+            <p class="review-text">Комментарий: ${item.comment || 'нет'}</p>
+            <p class="review-rating">Статус: ${item.status}</p>
+        </article>
+    `).join('');
+}
+
+function renderMyReviews(reviews) {
+    const list = document.getElementById('myReviewsList');
+    if (!list) {
+        return;
+    }
+
+    if (!reviews.length) {
+        list.innerHTML = '<article class="review-card"><p class="review-text">Вы пока не оставляли отзывов.</p></article>';
+        return;
+    }
+
+    list.innerHTML = reviews.map((review) => `
+        <article class="review-card">
+            <div class="review-header">
+                <div class="review-avatar">${ratingToStars(review.rating).charAt(0)}</div>
+                <div>
+                    <h3 class="review-name">Отзыв от ${formatDate(review.review_date)}</h3>
+                    <p class="review-service">Модерация: ${review.moderation_status}</p>
+                </div>
+            </div>
+            <p class="review-text">${review.text}</p>
+            <p class="review-rating">Оценка: ${ratingToStars(review.rating)}</p>
+        </article>
+    `).join('');
+}
+
+async function loadCabinetData() {
+    if (!document.getElementById('myAppointmentsList')) {
+        return;
+    }
+    if (!ensureAuthenticatedOrRedirect()) {
+        return;
+    }
+
+    const token = getAuthToken();
+    const greeting = document.getElementById('cabinetGreeting');
+    const user = getStoredUser();
+    if (greeting && user) {
+        greeting.textContent = `Здравствуйте, ${user.name || user.email}! Здесь ваша персональная информация.`;
+    }
+
+    try {
+        const [appointmentsRes, myReviewsRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/appointments/my`, {
+                headers: { Authorization: `Bearer ${token}` }
+            }),
+            fetch(`${API_BASE_URL}/reviews/my`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+        ]);
+
+        const appointmentsData = await appointmentsRes.json();
+        const myReviewsData = await myReviewsRes.json();
+
+        if (!appointmentsRes.ok) {
+            throw new Error(appointmentsData.message || 'Не удалось загрузить записи.');
+        }
+        if (!myReviewsRes.ok) {
+            throw new Error(myReviewsData.message || 'Не удалось загрузить отзывы.');
+        }
+
+        renderMyAppointments(appointmentsData.appointments || []);
+        renderMyReviews(myReviewsData.reviews || []);
+    } catch (error) {
+        const appointmentsList = document.getElementById('myAppointmentsList');
+        const reviewsList = document.getElementById('myReviewsList');
+        if (appointmentsList) {
+            appointmentsList.innerHTML = `<article class="review-card"><p class="review-text">Ошибка: ${error.message}</p></article>`;
+        }
+        if (reviewsList) {
+            reviewsList.innerHTML = `<article class="review-card"><p class="review-text">Ошибка: ${error.message}</p></article>`;
+        }
+    }
+}
+
+function initCabinetReviewForm() {
+    const form = document.getElementById('myReviewForm');
+    if (!form) {
+        return;
+    }
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!ensureAuthenticatedOrRedirect()) {
+            return;
+        }
+
+        const rating = document.getElementById('reviewRating').value;
+        const text = document.getElementById('reviewText').value.trim();
+        const token = getAuthToken();
+
+        if (!rating || !text) {
+            alert('Укажите оценку и текст отзыва.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/reviews`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ rating: Number(rating), text })
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || 'Не удалось отправить отзыв.');
+            }
+
+            alert('Отзыв отправлен на модерацию.');
+            form.reset();
+            loadCabinetData();
+        } catch (error) {
+            alert(error.message);
+        }
+    });
 }
 
 function renderReviews(reviews) {
@@ -510,4 +686,6 @@ async function loadReviews() {
 document.addEventListener('DOMContentLoaded', () => {
     initAuthUI();
     loadReviews();
+    initCabinetReviewForm();
+    loadCabinetData();
 });

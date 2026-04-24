@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет | Причесон</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-wrapper">
+                    <div class="logo">
+                        <img src="лого/5422807179900686044.jpg" alt="Причесон" class="logo-image">
+                        <div class="logo-text">
+                            <h1>Причесон</h1>
+                            <p class="logo-subtitle">Личный кабинет</p>
+                        </div>
+                    </div>
+                    <ul class="nav-menu" id="navMenu">
+                        <li><a href="/" class="nav-link">Главная</a></li>
+                        <li><a href="/services" class="nav-link">Услуги</a></li>
+                        <li><a href="/reviews" class="nav-link">Отзывы</a></li>
+                        <li><a href="/cabinet" class="nav-link">Кабинет</a></li>
+                    </ul>
+                    <div class="nav-actions">
+                        <a href="tel:+79044104002" class="phone-link">+7 (904) 410-40-02</a>
+                        <button class="menu-toggle" id="menuToggle">
+                            <span></span><span></span><span></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero hero-inner">
+        <div class="hero-overlay"></div>
+        <div class="container">
+            <div class="hero-content">
+                <h2 class="hero-title">Личный кабинет</h2>
+                <h1 class="hero-name">Ваши записи и отзывы</h1>
+                <p class="hero-description" id="cabinetGreeting">Загрузка профиля...</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="reviews">
+        <div class="container">
+            <h2 class="section-title">Мои записи</h2>
+            <div id="myAppointmentsList" class="reviews-grid">
+                <article class="review-card"><p class="review-text">Загрузка...</p></article>
+            </div>
+        </div>
+    </section>
+
+    <section class="services">
+        <div class="container">
+            <h2 class="section-title">Оставить отзыв</h2>
+            <div class="contact-form-wrapper">
+                <form id="myReviewForm" class="contact-form">
+                    <div class="form-group">
+                        <select id="reviewRating" required>
+                            <option value="">Оценка</option>
+                            <option value="5">5 - Отлично</option>
+                            <option value="4">4 - Хорошо</option>
+                            <option value="3">3 - Нормально</option>
+                            <option value="2">2 - Плохо</option>
+                            <option value="1">1 - Очень плохо</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="reviewText" rows="4" placeholder="Напишите ваш отзыв" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Отправить отзыв</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section class="reviews">
+        <div class="container">
+            <h2 class="section-title">Мои отзывы</h2>
+            <div id="myReviewsList" class="reviews-grid">
+                <article class="review-card"><p class="review-text">Загрузка...</p></article>
+            </div>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>

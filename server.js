@@ -44,6 +44,10 @@ app.get("/admin", (_req, res) => {
   res.sendFile(path.join(ROOT_DIR, "admin.html"));
 });
 
+app.get("/cabinet", (_req, res) => {
+  res.sendFile(path.join(ROOT_DIR, "cabinet.html"));
+});
+
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ message: "Internal server error." });

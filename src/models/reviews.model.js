@@ -31,6 +31,19 @@ async function getAllReviews() {
   return rows;
 }
 
+async function getReviewsByUser(userId) {
+  const { rows } = await pool.query(
+    `
+      SELECT id, user_id, text, rating, review_date, moderation_status, created_at
+      FROM reviews
+      WHERE user_id = $1
+      ORDER BY created_at DESC;
+    `,
+    [userId]
+  );
+  return rows;
+}
+
 async function updateReviewModerationStatus(id, moderationStatus) {
   const { rows } = await pool.query(
     `
@@ -53,6 +66,7 @@ module.exports = {
   createReview,
   getApprovedReviews,
   getAllReviews,
+  getReviewsByUser,
   updateReviewModerationStatus,
   deleteReview,
 };

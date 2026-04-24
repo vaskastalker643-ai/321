@@ -3,6 +3,7 @@ const {
   createReview,
   getApprovedReviews,
   getAllReviews,
+  getReviewsByUser,
   updateReviewModerationStatus,
   deleteReview,
 } = require("../models/reviews.model");
@@ -43,6 +44,15 @@ router.post("/", requireAuth, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: "Failed to create review.", error: error.message });
+  }
+});
+
+router.get("/my", requireAuth, async (req, res) => {
+  try {
+    const reviews = await getReviewsByUser(req.user.id);
+    return res.json({ reviews });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch your reviews.", error: error.message });
   }
 });
 

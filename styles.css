@@ -868,6 +868,29 @@ section {
     display: none;
 }
 
+.auth-quick-links {
+    display: flex;
+    gap: 8px;
+    margin-right: 10px;
+}
+
+.auth-link-btn {
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    background: transparent;
+    text-decoration: none;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.auth-link-btn:hover {
+    background: var(--primary-color);
+    color: #fff;
+}
+
 /* Footer */
 .footer {
     background: var(--bg-dark);
