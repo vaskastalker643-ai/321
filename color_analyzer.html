@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализ цветов логотипа</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        #logoPreview {
+            max-width: 400px;
+            margin: 20px 0;
+            border: 2px solid #ddd;
+        }
+        #results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        .color-box {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            margin: 10px;
+            border: 2px solid #333;
+            border-radius: 5px;
+        }
+        .color-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Анализ цветов логотипа Причесон</h1>
+    <input type="file" id="fileInput" accept="image/*">
+    <button onclick="analyzeImage()">Анализировать цвета</button>
+    
+    <div id="preview"></div>
+    <div id="results"></div>
+
+    <script>
+        let imageData = null;
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = document.createElement('img');
+                    img.id = 'logoPreview';
+                    img.src = event.target.result;
+                    img.onload = function() {
+                        document.getElementById('preview').innerHTML = '';
+                        document.getElementById('preview').appendChild(img);
+                        imageData = img;
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function analyzeImage() {
+            if (!imageData) {
+                alert('Пожалуйста, сначала загрузите изображение');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = imageData.width;
+            canvas.height = imageData.height;
+            ctx.drawImage(imageData, 0, 0);
+
+            const imageDataObj = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageDataObj.data;
+            
+            // Собираем цвета (пропускаем каждый 10-й пиксель для ускорения)
+            const colorMap = new Map();
+            
+            for (let i = 0; i < pixels.length; i += 40) { // RGBA = 4 байта, берем каждый 10-й пиксель
+                const r = pixels[i];
+                const g = pixels[i + 1];
+                const b = pixels[i + 2];
+                const a = pixels[i + 3];
+                
+                // Пропускаем прозрачные пиксели
+                if (a < 128) continue;
+                
+                // Округляем цвета для группировки похожих
+                const roundedR = Math.round(r / 10) * 10;
+                const roundedG = Math.round(g / 10) * 10;
+                const roundedB = Math.round(b / 10) * 10;
+                
+                const key = `${roundedR},${roundedG},${roundedB}`;
+                colorMap.set(key, (colorMap.get(key) || 0) + 1);
+            }
+
+            // Сортируем по частоте
+            const sortedColors = Array.from(colorMap.entries())
+                .map(([key, count]) => {
+                    const [r, g, b] = key.split(',').map(Number);
+                    return { r, g, b, count, hex: rgbToHex(r, g, b) };
+                })
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+
+            // Фильтруем слишком светлые и темные цвета
+            const dominantColors = sortedColors.filter(color => {
+                const brightness = (color.r + color.g + color.b) / 3;
+                return brightness > 30 && brightness < 240;
+            });
+
+            displayResults(sortedColors, dominantColors);
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? "0" + hex : hex;
+            }).join("");
+        }
+
+        function displayResults(allColors, dominantColors) {
+            const resultsDiv = document.getElementById('results');
+            let html = '<h2>Все основные цвета:</h2>';
+            
+            allColors.forEach((color, index) => {
+                html += `
+                    <div class="color-info">
+                        <div class="color-box" style="background-color: ${color.hex}"></div>
+                        <strong>${index + 1}. RGB(${color.r}, ${color.g}, ${color.b})</strong> = ${color.hex}
+                    </div>
+                `;
+            });
+
+            if (dominantColors.length > 0) {
+                html += '<h2 style="margin-top: 30px;">Рекомендуемые цвета для сайта:</h2>';
+                const mainColor = dominantColors[0];
+                html += `
+                    <div class="color-info" style="background: ${mainColor.hex}; color: white; padding: 20px;">
+                        <h3>Основной цвет:</h3>
+                        <div class="color-box" style="background-color: ${mainColor.hex}; width: 100px; height: 100px;"></div>
+                        <p><strong>RGB(${mainColor.r}, ${mainColor.g}, ${mainColor.b})</strong></p>
+                        <p><strong>HEX: ${mainColor.hex}</strong></p>
+                    </div>
+                `;
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
