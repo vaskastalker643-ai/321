@@ -1,42 +1,32 @@
-const bcrypt = require("bcryptjs");
 const pool = require("../src/db/pool");
+const { seedAdminIfNeeded } = require("../src/db/bootstrap");
 
 async function run() {
-  const { DATABASE_URL, ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
-
-  if (!DATABASE_URL) {
+  if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required.");
   }
-  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
     throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD are required.");
   }
 
-  const name = ADMIN_NAME || "Administrator";
-  const email = String(ADMIN_EMAIL).toLowerCase().trim();
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
-
-  const existing = await pool.query("SELECT id FROM users WHERE email = $1;", [email]);
-
-  if (existing.rows.length > 0) {
-    const userId = existing.rows[0].id;
+  const existingAdmin = await pool.query(
+    "SELECT id FROM users WHERE role = 'admin' LIMIT 1;"
+  );
+  if (existingAdmin.rows.length > 0) {
+    const { ADMIN_EMAIL } = process.env;
+    const email = String(ADMIN_EMAIL).toLowerCase().trim();
+    const passwordHash = await require("bcryptjs").hash(process.env.ADMIN_PASSWORD, 10);
     await pool.query(
       `
         UPDATE users
         SET role = 'admin', password_hash = $2, name = $3
-        WHERE id = $1;
+        WHERE email = $1;
       `,
-      [userId, passwordHash, name]
+      [email, passwordHash, process.env.ADMIN_NAME || "Administrator"]
     );
-    console.log(`Updated existing user as admin: ${email}`);
+    console.log(`Updated admin credentials: ${email}`);
   } else {
-    await pool.query(
-      `
-        INSERT INTO users (name, email, phone, password_hash, role)
-        VALUES ($1, $2, $3, $4, 'admin');
-      `,
-      [name, email, "+70000000000", passwordHash]
-    );
-    console.log(`Created new admin user: ${email}`);
+    await seedAdminIfNeeded();
   }
 }
 

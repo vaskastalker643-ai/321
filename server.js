@@ -1,6 +1,7 @@
 const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
+const { bootstrapDatabase } = require("./src/db/bootstrap");
 const authRoutes = require("./src/routes/auth.routes");
 const appointmentsRoutes = require("./src/routes/appointments.routes");
 const reviewsRoutes = require("./src/routes/reviews.routes");
@@ -53,6 +54,17 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ message: "Internal server error." });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+async function startServer() {
+  try {
+    await bootstrapDatabase();
+    console.log("Database bootstrap complete.");
+  } catch (error) {
+    console.error("Database bootstrap failed:", error.message);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();
